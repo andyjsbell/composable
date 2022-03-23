@@ -6,10 +6,7 @@ import { mintAssetsToWallet } from '@composable/utils/mintingHelper';
 import {waitForBlocks} from "@composable/utils/polkadotjs";
 
 /**
- * This suite includes tests for the constantProductDex Pallet.
- * Tested functionalities are:
- * Create - AddLiquidity - Buy - Sell - Swap - RemoveLiquidity with basic calculations with constantProductFormula and OwnerFee.
- * Mainly consists of happy path testing.
+ * This suite includes tests for the liquidityBootstrapping Pallet.
  */
 describe('tx.liquidityBootstrapping Tests', function () {
 
@@ -34,24 +31,25 @@ describe('tx.liquidityBootstrapping Tests', function () {
     walletId2Account = api.createType('AccountId32', walletId2.address).toString();
     baseAssetId = 4;
     quoteAssetId = 129;
-    baseAmount = 2500;
-    quoteAmount = 2500;
+    baseAmount = 250000000000;
+    quoteAmount = 250000000000;
     //sets the owner fee to 1.00%/Type Permill
     ownerFee = 10000;
   });
 
   before('Minting assets', async function() {
     this.timeout(8*60*1000);
-    await mintAssetsToWallet(walletId1, walletAlice, [1, baseAssetId, quoteAssetId]);
-    await mintAssetsToWallet(walletId2, walletAlice, [1, baseAssetId, quoteAssetId]);
+    await mintAssetsToWallet(sudoKey, sudoKey, [baseAssetId, quoteAssetId])
+    await mintAssetsToWallet(walletId1, sudoKey, [1, baseAssetId]);
+    await mintAssetsToWallet(walletId2, sudoKey, [1, baseAssetId, quoteAssetId]);
   });
 
-  describe('tx.constantProductDex Success Tests', function() {
+  describe('tx.liquidityBootstrapping Success Tests', function() {
     if(!testConfiguration.enabledTests.successTests.enabled){
       return;
     }
 
-    it('Users can create a constantProduct pool', async function() {
+    it('Users can create a liquidityBootstrapping pool', async function() {
       if(!testConfiguration.enabledTests.successTests.createPool.enabled){
         return;
       }
@@ -65,14 +63,13 @@ describe('tx.liquidityBootstrapping Tests', function () {
       expect(result.isOk).to.be.true;
     })
 
-    it('Given that users has sufficient balance, User1 can send funds to pool', async function(){
+    it('Pool creator can add more liquidity', async function(){
       if(!testConfiguration.enabledTests.successTests.addLiquidityTests.enabled){
         return;
       }
       this.timeout(2*60*1000);
-      await waitForBlocks(2);
       const result = await addFundstoThePool(
-        walletId1,
+        sudoKey,
         baseAmount,
         quoteAmount
       );
@@ -83,14 +80,13 @@ describe('tx.liquidityBootstrapping Tests', function () {
       expect(result.walletIdResult.toString()).to.be.equal(walletId1Account);
     });
 
-    it('User1 can buy from the pool and router respects the constantProductFormula', async function() {
+    it('User1 can buy from the pool', async function() {
       if(!testConfiguration.enabledTests.successTests.buyTest.enabled){
         return;
       }
       this.timeout(2 * 60 * 1000);
-      const result = await buyFromPool(walletId1, baseAssetId, 100000000000);
+      const result = await buyFromPool(walletId1, baseAssetId, 1000000000);
       expect(result.accountId.toString()).to.be.equal(walletId1Account);
-      //Expected amount is calculated based on the constantProductFormula which is 1:1 for this case.
       expect(result.quoteAmount.toNumber()).to.be.equal(result.expectedConversion);
     });
 
@@ -99,8 +95,8 @@ describe('tx.liquidityBootstrapping Tests', function () {
         return;
       }
       this.timeout(2*60*1000);
-      const accountIdSeller = await sellToPool(walletId1, baseAssetId, 100000000000);
-      expect(accountIdSeller).to.be.equal(walletId1Account);
+      const {data: [resultPoolId, resultAccountId]} = await sellToPool(walletId1, baseAssetId, 100000000000);
+      expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', walletId1.publicKey).toString());
     });
 
     it('User2 can swap from the pool', async function(){
@@ -118,13 +114,13 @@ describe('tx.liquidityBootstrapping Tests', function () {
       console.debug(result); // ToDo (D. Roth): Update!
     });
 
-    it('User1 can remove liquidity from the pool by using LP Tokens', async function(){
+    it('Pool creator should be able to remove liquidity', async function(){
       if(!testConfiguration.enabledTests.successTests.removeLiquidityTest.enabled){
         return;
       }
       this.timeout(2*60*1000);
       //Randomly checks an integer value that is always < mintedLPTokens.
-      const result = await removeLiquidityFromPool(walletId1, Math.floor(Math.random()*wallet1LpTokens));
+      const result = await removeLiquidityFromPool(sudoKey, Math.floor(Math.random()*wallet1LpTokens));
       console.debug(result.toString());
     });
   });

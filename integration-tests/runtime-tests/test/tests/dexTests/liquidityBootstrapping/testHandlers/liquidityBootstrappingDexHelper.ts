@@ -22,7 +22,7 @@ export async function createPool(sudoKey: KeyringPair, baseAssetId: number, quot
       quote: api.createType('u128', quoteAssetId)
     }),
     sale: api.createType('PalletLiquidityBootstrappingSale', {
-      start: api.createType('u32', 0),
+      start: api.createType('u32', (await api.query.system.number()).toNumber() + 5),
       end: api.consts.liquidityBootstrapping.maxSaleDuration,
       initialWeight: api.consts.liquidityBootstrapping.maxInitialWeight,
       finalWeight: api.consts.liquidityBootstrapping.minFinalWeight
@@ -84,7 +84,7 @@ export async function sellToPool(walletId: KeyringPair, assetId: number, amount:
   const assetIdParam = api.createType('u128', assetId);
   const amountParam = api.createType('u128', amount);
   const keepAliveParam = api.createType('bool', false);
-  const {data: [result, ...rest]} = await sendAndWaitForSuccess(
+  const result = await sendAndWaitForSuccess(
     api,
     walletId,
     api.events.liquidityBootstrapping.Swapped.is,
@@ -95,21 +95,21 @@ export async function sellToPool(walletId: KeyringPair, assetId: number, amount:
       keepAliveParam
     )
   )
-  return result.toString();        
+  return result;
 }
 
 export async function removeLiquidityFromPool(walletId: KeyringPair, lpTokens:number){
   const expectedLPTokens = mintedLPTokens-lpTokens;
   const poolIdParam = api.createType('u128', poolId);
-  const {data: [resultPoolId,resultWallet,resultBase,resultQuote,remainingLpTokens]}=await sendAndWaitForSuccess(
+  const result = await sendAndWaitForSuccess(
     api,
     walletId,
-    api.events.liquidityBootstrapping.LiquidityRemoved.is, // Doesn't Exist!
+    api.events.liquidityBootstrapping.PoolDeleted.is, // Doesn't Exist!
     api.tx.liquidityBootstrapping.removeLiquidity(
       poolIdParam
     )
   );   
-  return {remainingLpTokens, expectedLPTokens}
+  return result;
 }
 
 export async function swapTokenPairs(wallet: KeyringPair, 
