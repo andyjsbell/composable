@@ -1,7 +1,7 @@
 import testConfiguration from './test_configuration.json';
 import {expect} from "chai";
 import {KeyringPair} from "@polkadot/keyring/types";
-import { addFundstoThePool, buyFromPool, createPool, getOwnerFee, getUserTokens, removeLiquidityFromPool, sellToPool, swapTokenPairs } from './testHandlers/liquidityBootstrappingDexHelper';
+import { addFundstoThePool, buyFromPool, createPool, removeLiquidityFromPool, sellToPool, swapTokenPairs } from './testHandlers/liquidityBootstrappingDexHelper';
 import { mintAssetsToWallet } from '@composable/utils/mintingHelper';
 import {waitForBlocks} from "@composable/utils/polkadotjs";
 
@@ -11,24 +11,18 @@ import {waitForBlocks} from "@composable/utils/polkadotjs";
 describe('tx.liquidityBootstrapping Tests', function () {
 
   let sudoKey: KeyringPair,
-    walletId1: KeyringPair,
-    walletId2: KeyringPair;
+    wallet: KeyringPair;
   let poolId: number,
+    poolId2: number,
     baseAssetId: number,
     quoteAssetId: number,
-    wallet1LpTokens: number,
     baseAmount: number,
     quoteAmount: number,
-    ownerFee: number,
-    walletId1Account: string,
-    walletId2Account: string;
+    ownerFee: number;
 
   before('Initialize variables', function() {
     sudoKey = walletAlice;
-    walletId1 = walletEve.derive("/test/liquidityBootstrapping/walletId1");
-    walletId2 = walletBob.derive("/test/liquidityBootstrapping/walletId2");
-    walletId1Account = api.createType('AccountId32', walletId1.address).toString();
-    walletId2Account = api.createType('AccountId32', walletId2.address).toString();
+    wallet = walletEve.derive("/test/liquidityBootstrapping");
     baseAssetId = 4;
     quoteAssetId = 129;
     baseAmount = 250000000000;
@@ -38,10 +32,10 @@ describe('tx.liquidityBootstrapping Tests', function () {
   });
 
   before('Minting assets', async function() {
+    return;
     this.timeout(8*60*1000);
     await mintAssetsToWallet(sudoKey, sudoKey, [baseAssetId, quoteAssetId])
-    await mintAssetsToWallet(walletId1, sudoKey, [1, baseAssetId]);
-    await mintAssetsToWallet(walletId2, sudoKey, [1, baseAssetId, quoteAssetId]);
+    await mintAssetsToWallet(wallet, sudoKey, [1, baseAssetId, quoteAssetId]);
   });
 
   describe('tx.liquidityBootstrapping Success Tests', function() {
@@ -54,13 +48,16 @@ describe('tx.liquidityBootstrapping Tests', function () {
         return;
       }
       this.timeout(2*60*1000);
-      const result = await createPool(
+      const end = api.createType('u32', api.consts.liquidityBootstrapping.maxSaleDuration);
+      const {data: [result],} = await createPool(
         sudoKey,
         baseAssetId,
         quoteAssetId,
-        ownerFee
+        ownerFee,
+        end
       );
       expect(result.isOk).to.be.true;
+      poolId = (await api.query.liquidityBootstrapping.poolCount()).toNumber() - 1;
     })
 
     it('Pool creator can add more liquidity', async function(){
@@ -68,64 +65,103 @@ describe('tx.liquidityBootstrapping Tests', function () {
         return;
       }
       this.timeout(2*60*1000);
-      const result = await addFundstoThePool(
+      const {data: [result,]} = await addFundstoThePool(
         sudoKey,
+        poolId,
         baseAmount,
         quoteAmount
       );
-      //Once funds added to the pool, User is deposited with LP Tokens.
-      wallet1LpTokens = result.returnedLPTokens.toNumber();
-      expect(result.baseAdded.toNumber()).to.be.equal(baseAmount);
-      expect(result.quoteAdded.toNumber()).to.be.equal(quoteAmount);
-      expect(result.walletIdResult.toString()).to.be.equal(walletId1Account);
+      console.debug(result.toString());
     });
 
-    it('User1 can buy from the pool', async function() {
+    it('User can buy from the pool', async function() {
       if(!testConfiguration.enabledTests.successTests.buyTest.enabled){
         return;
       }
       this.timeout(2 * 60 * 1000);
-      const result = await buyFromPool(walletId1, baseAssetId, 1000000000);
-      expect(result.accountId.toString()).to.be.equal(walletId1Account);
-      expect(result.quoteAmount.toNumber()).to.be.equal(result.expectedConversion);
+      const {data: [result, resultAccountId],} = await buyFromPool(wallet, poolId, baseAssetId, 1000000000);
+      expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', wallet.publicKey).toString());
     });
 
-    it('User1 can sell on the pool', async function(){
+    it('User can sell on the pool', async function(){
       if(!testConfiguration.enabledTests.successTests.sellTest.enabled){
         return;
       }
       this.timeout(2*60*1000);
-      const {data: [resultPoolId, resultAccountId]} = await sellToPool(walletId1, baseAssetId, 100000000000);
-      expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', walletId1.publicKey).toString());
+      const {data: [resultPoolId, resultAccountId]} = await sellToPool(wallet, poolId, baseAssetId, 100000000000);
+      expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', wallet.publicKey).toString());
     });
 
-    it('User2 can swap from the pool', async function(){
+    it('User can swap from the pool', async function(){
       if(!testConfiguration.enabledTests.successTests.swapTest.enabled){
         return;
       }
       this.timeout(2*60*1000);
-      const quotedAmount = 12;
-      const result = await swapTokenPairs(
-        walletId2,
+      const quotedAmount = baseAmount;
+      const {data: [result],} = await swapTokenPairs(
+        wallet,
+        poolId,
         baseAssetId,
         quoteAssetId,
         quotedAmount,
       );
-      console.debug(result); // ToDo (D. Roth): Update!
+      console.debug(result.toString()); // ToDo (D. Roth): Update!
     });
+  });
 
-    it('Pool creator should be able to remove liquidity', async function(){
-      if(!testConfiguration.enabledTests.successTests.removeLiquidityTest.enabled){
+  describe.only('tx.liquidityBootstrapping Failure Tests', function() {
+    if (!testConfiguration.enabledTests.successTests.enabled) {
+      return;
+    }
+
+    it('Sudo can create a second liquidityBootstrapping pool', async function () {
+      if (!testConfiguration.enabledTests.successTests.createPool.enabled) {
         return;
       }
-      this.timeout(2*60*1000);
-      //Randomly checks an integer value that is always < mintedLPTokens.
-      const result = await removeLiquidityFromPool(sudoKey, Math.floor(Math.random()*wallet1LpTokens));
+      this.timeout(2 * 60 * 1000);
+      const startDelay = 3;
+      const end = api.createType('u32',
+        api.createType('u32', (await api.query.system.number()).toNumber() + startDelay + 1000)
+      )
+      const {data: [result],} = await createPool(
+        sudoKey,
+        baseAssetId,
+        quoteAssetId,
+        ownerFee,
+        end,
+        startDelay
+      );
+      expect(result.isOk).to.be.true;
+      poolId2 = (await api.query.liquidityBootstrapping.poolCount()).toNumber() - 1;
+    })
+
+    it('Pool creator can add more liquidity to second pool', async function () {
+      if (!testConfiguration.enabledTests.successTests.addLiquidityTests.enabled) {
+        return;
+      }
+      this.timeout(2 * 60 * 1000);
+      const {data: [result,]} = await addFundstoThePool(
+        sudoKey,
+        poolId2,
+        baseAmount,
+        quoteAmount
+      );
+      console.debug(result.toString());
+    });
+
+    /**
+     * Canceling the above created second pool.
+     *
+     * This only works if poolState == Ended
+     */
+    it('Pool creator can cancel second pool', async function () {
+      if (!testConfiguration.enabledTests.successTests.removeLiquidityTest.enabled) {
+        return;
+      }
+      this.timeout(2 * 60 * 1000);
+      await waitForBlocks(10);
+      const {data: [result],} = await removeLiquidityFromPool(sudoKey, poolId2);
       console.debug(result.toString());
     });
   });
 })
-
-
-
-

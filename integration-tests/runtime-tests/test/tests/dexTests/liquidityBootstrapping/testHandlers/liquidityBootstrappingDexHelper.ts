@@ -1,20 +1,18 @@
 import { sendAndWaitForSuccess } from '@composable/utils/polkadotjs';
 import {KeyringPair} from "@polkadot/keyring/types";
-import { u128 } from '@polkadot/types-codec';
 
 /**
  *Contains handler methods for the constantProductDex Tests. 
  */
-let poolId: number;  
-let constantProductk: number;
-let baseAmountTotal: number;
-let quoteAmountTotal: number;
-let mintedLPTokens: number;
-baseAmountTotal = 0;
-quoteAmountTotal = 0;
-mintedLPTokens = 0;
 
-export async function createPool(sudoKey: KeyringPair, baseAssetId: number, quoteAssetId: number, fee: number) {
+export async function createPool(
+  sudoKey: KeyringPair,
+  baseAssetId: number,
+  quoteAssetId: number,
+  fee: number,
+  end,
+  startDelay=5
+) {
   const pool = api.createType('PalletLiquidityBootstrappingPool', {
     owner: api.createType('AccountId32', sudoKey.publicKey),
     pair: api.createType('ComposableTraitsDefiCurrencyPair', {
@@ -22,26 +20,25 @@ export async function createPool(sudoKey: KeyringPair, baseAssetId: number, quot
       quote: api.createType('u128', quoteAssetId)
     }),
     sale: api.createType('PalletLiquidityBootstrappingSale', {
-      start: api.createType('u32', (await api.query.system.number()).toNumber() + 5),
-      end: api.consts.liquidityBootstrapping.maxSaleDuration,
+      start: api.createType('u32', (await api.query.system.number()).toNumber() + startDelay),
+      end: end,
       initialWeight: api.consts.liquidityBootstrapping.maxInitialWeight,
       finalWeight: api.consts.liquidityBootstrapping.minFinalWeight
     }),
     fee: api.createType('Permill', fee)
   });
-  const {data: [result],} = await sendAndWaitForSuccess(
+  return await sendAndWaitForSuccess(
     api,
     sudoKey,
     api.events.sudo.Sudid.is,
     api.tx.sudo.sudo(api.tx.liquidityBootstrapping.create(pool))
   );
-  return result;
 }
-export async function addFundstoThePool(walletId:KeyringPair, baseAmount:number, quoteAmount:number){
+export async function addFundstoThePool(walletId:KeyringPair, poolId:number, baseAmount:number, quoteAmount:number){
   const baseAmountParam = api.createType('u128', baseAmount);
   const quoteAmountParam = api.createType('u128', quoteAmount);
   const keepAliveParam = api.createType('bool', true);
-  const {data: [,walletIdResult,baseAdded, quoteAdded,returnedLPTokens]} = await sendAndWaitForSuccess(
+  return await sendAndWaitForSuccess(
     api,
     walletId,
     api.events.liquidityBootstrapping.LiquidityAdded.is,
@@ -52,20 +49,14 @@ export async function addFundstoThePool(walletId:KeyringPair, baseAmount:number,
       keepAliveParam
     )
   );
-  mintedLPTokens += returnedLPTokens.toNumber();
-  baseAmountTotal += baseAdded.toNumber();
-  quoteAmountTotal += quoteAdded.toNumber();
-  return {walletIdResult, baseAdded, quoteAdded, returnedLPTokens};
 }
 
-export async function buyFromPool(walletId: KeyringPair, assetId:number, amountToBuy: number){
+export async function buyFromPool(walletId: KeyringPair, poolId:number, assetId:number, amountToBuy: number){
   const poolIdParam = api.createType('u128', poolId);
   const assetIdParam = api.createType('u128', assetId);
   const amountParam = api.createType('u128', amountToBuy);
   const keepAlive = api.createType('bool', true);
-  constantProductk = baseAmountTotal*quoteAmountTotal;
-  const expectedConversion = Math.floor((constantProductk/(baseAmountTotal-amountToBuy)))-quoteAmountTotal;
-  const {data: [accountId,poolArg,quoteArg,swapArg,amountgathered,quoteAmount,ownerFee] } = await sendAndWaitForSuccess(
+  return await sendAndWaitForSuccess(
     api,
     walletId,
     api.events.liquidityBootstrapping.Swapped.is,
@@ -76,15 +67,14 @@ export async function buyFromPool(walletId: KeyringPair, assetId:number, amountT
       keepAlive
     )
   );
-  return {accountId, quoteAmount, expectedConversion, ownerFee};
 }
 
-export async function sellToPool(walletId: KeyringPair, assetId: number, amount:number){
+export async function sellToPool(walletId: KeyringPair, poolId:number, assetId: number, amount:number){
   const poolIdParam = api.createType('u128', poolId);
   const assetIdParam = api.createType('u128', assetId);
   const amountParam = api.createType('u128', amount);
   const keepAliveParam = api.createType('bool', false);
-  const result = await sendAndWaitForSuccess(
+  return await sendAndWaitForSuccess(
     api,
     walletId,
     api.events.liquidityBootstrapping.Swapped.is,
@@ -95,24 +85,23 @@ export async function sellToPool(walletId: KeyringPair, assetId: number, amount:
       keepAliveParam
     )
   )
-  return result;
 }
 
-export async function removeLiquidityFromPool(walletId: KeyringPair, lpTokens:number){
-  const expectedLPTokens = mintedLPTokens-lpTokens;
+export async function removeLiquidityFromPool(walletId: KeyringPair, poolId:number){
   const poolIdParam = api.createType('u128', poolId);
-  const result = await sendAndWaitForSuccess(
+  return await sendAndWaitForSuccess(
     api,
     walletId,
     api.events.liquidityBootstrapping.PoolDeleted.is, // Doesn't Exist!
     api.tx.liquidityBootstrapping.removeLiquidity(
       poolIdParam
     )
-  );   
-  return result;
+  );
 }
 
-export async function swapTokenPairs(wallet: KeyringPair, 
+export async function swapTokenPairs(
+  wallet: KeyringPair,
+  poolId:number,
   baseAssetId: number,
   quoteAssetId:number,
   quoteAmount: number,
@@ -126,7 +115,7 @@ export async function swapTokenPairs(wallet: KeyringPair,
     const quoteAmountParam = api.createType('u128', quoteAmount);
     const minReceiveParam = api.createType('u128', minReceiveAmount);
     const keepAliveParam = api.createType('bool', true);
-    const {data: [resultPoolId,resultWallet,resultQuote,resultBase,resultBaseAmount,returnedQuoteAmount,]}= await sendAndWaitForSuccess(
+    return await sendAndWaitForSuccess(
       api,
       wallet,
       api.events.liquidityBootstrapping.Swapped.is,
@@ -138,15 +127,4 @@ export async function swapTokenPairs(wallet: KeyringPair,
         keepAliveParam
       )
     );
-    return {returnedQuoteAmount};
-}
-
-export async function getUserTokens(walletId: KeyringPair, assetId: number){
-  const {free, reserved, frozen} = await api.query.tokens.accounts(walletId.address, assetId); 
-  return free.toNumber();
-}
-
-export async function getOwnerFee(poolId: number){
-  const result = await api.query.liquidityBootstrapping.pools(api.createType('u128', poolId));
-  return result.unwrap()
 }
