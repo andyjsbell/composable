@@ -32,7 +32,6 @@ describe('tx.liquidityBootstrapping Tests', function () {
   });
 
   before('Minting assets', async function() {
-    return;
     this.timeout(8*60*1000);
     await mintAssetsToWallet(sudoKey, sudoKey, [baseAssetId, quoteAssetId])
     await mintAssetsToWallet(wallet, sudoKey, [1, baseAssetId, quoteAssetId]);
@@ -44,8 +43,8 @@ describe('tx.liquidityBootstrapping Tests', function () {
     }
 
     it('Users can create a liquidityBootstrapping pool', async function() {
-      if(!testConfiguration.enabledTests.successTests.createPool.enabled){
-        return;
+      if(!testConfiguration.enabledTests.successTests.createPoolTest.create1){
+        this.skip();
       }
       this.timeout(2*60*1000);
       const end = api.createType('u32', api.consts.liquidityBootstrapping.maxSaleDuration);
@@ -60,68 +59,74 @@ describe('tx.liquidityBootstrapping Tests', function () {
       poolId = (await api.query.liquidityBootstrapping.poolCount()).toNumber() - 1;
     })
 
-    it('Pool creator can add more liquidity', async function(){
-      if(!testConfiguration.enabledTests.successTests.addLiquidityTests.enabled){
-        return;
+    it('Pool creator can add more liquidity', async function() {
+      if(!testConfiguration.enabledTests.successTests.addLiquidityTest.addLiquidity1){
+        this.skip();
       }
       this.timeout(2*60*1000);
-      const {data: [result,]} = await addFundstoThePool(
+      const {data: [resultPoolId,]} = await addFundstoThePool(
         sudoKey,
         poolId,
         baseAmount,
         quoteAmount
       );
-      console.debug(result.toString());
+      expect(resultPoolId.toNumber()).to.be.equal(poolId);
     });
 
     it('User can buy from the pool', async function() {
       if(!testConfiguration.enabledTests.successTests.buyTest.enabled){
-        return;
+        this.skip();
       }
       this.timeout(2 * 60 * 1000);
-      const {data: [result, resultAccountId],} = await buyFromPool(wallet, poolId, baseAssetId, 1000000000);
+      const {data: [resultPoolId, resultAccountId],} = await buyFromPool(wallet, poolId, baseAssetId, 1000000000);
+      expect(resultPoolId.toNumber()).to.be.equal(poolId);
       expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', wallet.publicKey).toString());
     });
 
-    it('User can sell on the pool', async function(){
+    it('User can sell on the pool', async function() {
       if(!testConfiguration.enabledTests.successTests.sellTest.enabled){
-        return;
+        this.skip();
       }
       this.timeout(2*60*1000);
       const {data: [resultPoolId, resultAccountId]} = await sellToPool(wallet, poolId, baseAssetId, 100000000000);
+      expect(resultPoolId.toNumber()).to.be.equal(poolId);
       expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', wallet.publicKey).toString());
     });
 
-    it('User can swap from the pool', async function(){
+    it('User can swap from the pool', async function() {
       if(!testConfiguration.enabledTests.successTests.swapTest.enabled){
-        return;
+        this.skip();
       }
       this.timeout(2*60*1000);
       const quotedAmount = baseAmount;
-      const {data: [result],} = await swapTokenPairs(
+      const {data: [resultPoolId, resultAccountId],} = await swapTokenPairs(
         wallet,
         poolId,
         baseAssetId,
         quoteAssetId,
         quotedAmount,
       );
-      console.debug(result.toString()); // ToDo (D. Roth): Update!
+      expect(resultPoolId.toNumber()).to.be.equal(poolId);
+      expect(resultAccountId.toString()).to.be.equal(api.createType('AccountId32', wallet.publicKey).toString());
     });
   });
 
-  describe.only('tx.liquidityBootstrapping Failure Tests', function() {
+  describe('tx.liquidityBootstrapping Cancel Pool Tests', function() {
     if (!testConfiguration.enabledTests.successTests.enabled) {
       return;
     }
 
     it('Sudo can create a second liquidityBootstrapping pool', async function () {
-      if (!testConfiguration.enabledTests.successTests.createPool.enabled) {
-        return;
+      if (!testConfiguration.enabledTests.successTests.createPoolTest.create2) {
+        this.skip();
       }
       this.timeout(2 * 60 * 1000);
-      const startDelay = 3;
+      const startDelay = 10;
       const end = api.createType('u32',
-        api.createType('u32', (await api.query.system.number()).toNumber() + startDelay + 1000)
+        api.createType('u32', (
+          await api.query.system.number()).toNumber()
+          + startDelay
+          + api.consts.liquidityBootstrapping.minSaleDuration.toNumber())
       )
       const {data: [result],} = await createPool(
         sudoKey,
@@ -136,8 +141,8 @@ describe('tx.liquidityBootstrapping Tests', function () {
     })
 
     it('Pool creator can add more liquidity to second pool', async function () {
-      if (!testConfiguration.enabledTests.successTests.addLiquidityTests.enabled) {
-        return;
+      if (!testConfiguration.enabledTests.successTests.addLiquidityTest.addLiquidity2) {
+        this.skip();
       }
       this.timeout(2 * 60 * 1000);
       const {data: [result,]} = await addFundstoThePool(
@@ -146,7 +151,7 @@ describe('tx.liquidityBootstrapping Tests', function () {
         baseAmount,
         quoteAmount
       );
-      console.debug(result.toString());
+      expect(result.toNumber()).to.be.equal(poolId2);
     });
 
     /**
@@ -156,12 +161,11 @@ describe('tx.liquidityBootstrapping Tests', function () {
      */
     it('Pool creator can cancel second pool', async function () {
       if (!testConfiguration.enabledTests.successTests.removeLiquidityTest.enabled) {
-        return;
+        this.skip();
       }
       this.timeout(2 * 60 * 1000);
-      await waitForBlocks(10);
       const {data: [result],} = await removeLiquidityFromPool(sudoKey, poolId2);
-      console.debug(result.toString());
+      expect(result.toNumber()).to.be.equal(poolId2);
     });
   });
 })

@@ -4,14 +4,13 @@
      
     "successTests": {
       "enabled": true,
-      "createPool": {
-        "enabled": true
+      "createPoolTest": {
+        "create1": true,
+        "create2": true
       },
-      "addLiquidityTests": {
-        "enabled": true
-      },
-      "poolDrainTest": {
-        "enabled": true
+      "addLiquidityTest": {
+        "addLiquidity1": true,
+        "addLiquidity2": true
       },
       "buyTest": {
         "enabled": true
@@ -22,12 +21,9 @@
       "swapTest": {
         "enabled": true
       },
-      "ownerFeeTest": {
-        "enabled": true
-      },
       "removeLiquidityTest": {
-        "enabled": true
+        "enabled": false
       }
-    }    
+    }
   }
 }
