@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - integration-tests/full-ci-suite
   pull_request:
     types: [ labeled, synchronize, opened, reopened ]
     branches:
