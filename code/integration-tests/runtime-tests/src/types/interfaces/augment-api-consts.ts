@@ -535,6 +535,7 @@ declare module '@polkadot/api-base/types/consts' {
       [key: string]: Codec;
     };
     stakingRewards: {
+      lockId: U8aFixed & AugmentedConst<ApiType>;
       /**
        * Maximum number of reward configurations per pool.
        **/
