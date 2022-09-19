@@ -738,17 +738,18 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       // Transaction
       const {
         // ToDo (D. Roth): Update!
-        data: [resultAccountId, resultPositionId, resultSlashAmount]
+        data: [resultAccountId, resultFNFTCollectionId, resultFNFTInstanceId, resultSlashAmount]
       } = await sendAndWaitForSuccess(
         api,
         walletStaker2,
-        api.events.stakingRewards.Unstaked.is,
+        api.events.stakingRewards.UnstakingSlashed.is,
         api.tx.stakingRewards.unstake(fNFTCollectionId2, fNFTInstanceId2)
       );
 
       // Verification
       expect(resultAccountId.toString()).to.be.equal(api.createType("AccountId32", walletStaker2.publicKey).toString());
-      expect(resultPositionId).to.be.bignumber.equal(fNFTCollectionId2);
+      expect(resultFNFTCollectionId).to.be.bignumber.equal(fNFTCollectionId2);
+      expect(resultFNFTInstanceId).to.be.bignumber.equal(fNFTInstanceId2);
       expect(resultSlashAmount).to.be.bignumber.greaterThan(new BN(0));
 
       // Expecting wallets stake to return nothing.
@@ -903,8 +904,8 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       );
       expect(poolInfo.unwrap().assetId.toString()).to.equal(POOL_1_BASE_ASSET_ID.toString());
       // ToDo (D.Roth): Change comparison to amount from above.
-      expect(poolInfo.unwrap().rewards[1]["rewardRate"]["amount"]).to.be.greaterThan(
-        poolInfoBefore.unwrap().rewards[1]["rewardRate"]["amount"]
+      expect(poolInfo.unwrap().rewards[0]["rewardRate"]["amount"]).to.be.greaterThan(
+        poolInfoBefore.unwrap().rewards[0]["rewardRate"]["amount"]
       );
     });
   });

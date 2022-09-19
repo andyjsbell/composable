@@ -950,6 +950,7 @@ declare module '@polkadot/api-base/types/events' {
       StakeAmountExtended: AugmentedEvent<ApiType, [fnftCollectionId: u128, fnftInstanceId: u64, amount: u128], { fnftCollectionId: u128, fnftInstanceId: u64, amount: u128 }>;
       Staked: AugmentedEvent<ApiType, [poolId: u128, owner: AccountId32, amount: u128, durationPreset: u64, fnftCollectionId: u128, fnftInstanceId: u64, keepAlive: bool], { poolId: u128, owner: AccountId32, amount: u128, durationPreset: u64, fnftCollectionId: u128, fnftInstanceId: u64, keepAlive: bool }>;
       Unstaked: AugmentedEvent<ApiType, [owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64], { owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64 }>;
+      UnstakingSlashed: AugmentedEvent<ApiType, [owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64, slashAmount: u128], { owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64, slashAmount: u128 }>;
       /**
        * Generic event
        **/

@@ -1291,7 +1291,7 @@ declare module '@polkadot/api-base/types/errors' {
        **/
       RewardsPoolNotFound: AugmentedError<ApiType>;
       /**
-       * The rewards pot (cold wallet) for this pool is empty.
+       * The rewards pot for this pool is empty.
        **/
       RewardsPotEmpty: AugmentedError<ApiType>;
       /**
