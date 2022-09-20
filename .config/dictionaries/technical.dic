@@ -112,6 +112,7 @@ findutils
 fnft
 fnfts
 fontconfig
+fontname
 freetype
 fsevenm
 FSIZE
@@ -136,6 +137,7 @@ ifeq
 imagesdir
 imagesoutdir
 immer
+includeurl
 inprocess
 ipam
 ipetkov # github username
@@ -208,6 +210,7 @@ pctest
 peasy
 peekable
 peerset
+penwidth
 perbill
 permill
 perquintill
@@ -279,6 +282,7 @@ stdenv
 structopt
 styleguide
 submessage
+Subql
 substituters
 subwasm
 subxt
