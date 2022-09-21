@@ -502,6 +502,8 @@
               mk-xcvm-contract "xcvm-asset-registry";
             xcvm-contract-router = mk-xcvm-contract "xcvm-router";
             xcvm-contract-interpreter = mk-xcvm-contract "xcvm-interpreter";
+            subxt =
+              pkgs.callPackage ./code/utils/composable-subxt/subxt.nix { };
 
             subsquid-processor = let
               processor = pkgs.buildNpmPackage {
@@ -1046,6 +1048,7 @@
                   nix-tree
                   nixfmt
                   rnix-lsp
+                  subxt
                 ] ++ docs-renders;
             });
 
@@ -1106,8 +1109,7 @@
             };
             devnet-picasso = {
               type = "app";
-              program =
-                "${packages.devnet-picasso.script}/bin/run-devnet-picasso-dev";
+              program = "${packages.devnet-picasso}/bin/run-devnet-picasso-dev";
             };
 
             devnet-kusama-picasso-karura = {
@@ -1219,7 +1221,7 @@
                 homeDirectory = "/home/vscode";
                 stateVersion = "22.05";
                 packages =
-                  [ eachSystemOutputs.packages.x86_64-linux.rust-nightly ]
+                  [ eachSystemOutputs.packages.x86_64-linux.rust-nightly subxt ]
                   ++ (mk-containers-tools-minimal pkgs)
                   ++ (mk-docker-in-docker pkgs);
               };
@@ -1243,9 +1245,10 @@
                 username = "vscode";
                 homeDirectory = "/home/vscode";
                 stateVersion = "22.05";
-                packages =
-                  [ eachSystemOutputs.packages.aarch64-linux.rust-nightly ]
-                  ++ (mk-containers-tools-minimal pkgs)
+                packages = [
+                  eachSystemOutputs.packages.aarch64-linux.rust-nightly
+                  subxt
+                ] ++ (mk-containers-tools-minimal pkgs)
                   ++ (mk-docker-in-docker pkgs);
               };
               programs = {
