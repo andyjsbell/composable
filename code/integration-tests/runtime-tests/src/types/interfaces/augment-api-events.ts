@@ -521,7 +521,7 @@ declare module '@polkadot/api-base/types/events' {
       MarketCreated: AugmentedEvent<ApiType, [marketId: u32, vaultId: u64, manager: AccountId32, currencyPair: ComposableTraitsDefiCurrencyPairCurrencyId], { marketId: u32, vaultId: u64, manager: AccountId32, currencyPair: ComposableTraitsDefiCurrencyPairCurrencyId }>;
       MarketUpdated: AugmentedEvent<ApiType, [marketId: u32, input: ComposableTraitsLendingUpdateInput], { marketId: u32, input: ComposableTraitsLendingUpdateInput }>;
       /**
-       * Event emitted to warn that loan may go under collateralized soon.
+       * Event emitted to warn that loan may go under collateralize soon.
        **/
       MayGoUnderCollateralizedSoon: AugmentedEvent<ApiType, [marketId: u32, account: AccountId32], { marketId: u32, account: AccountId32 }>;
       /**
@@ -949,8 +949,8 @@ declare module '@polkadot/api-base/types/events' {
       SplitPosition: AugmentedEvent<ApiType, [positions: Vec<ITuple<[u128, u64, u128]>>], { positions: Vec<ITuple<[u128, u64, u128]>> }>;
       StakeAmountExtended: AugmentedEvent<ApiType, [fnftCollectionId: u128, fnftInstanceId: u64, amount: u128], { fnftCollectionId: u128, fnftInstanceId: u64, amount: u128 }>;
       Staked: AugmentedEvent<ApiType, [poolId: u128, owner: AccountId32, amount: u128, durationPreset: u64, fnftCollectionId: u128, fnftInstanceId: u64, keepAlive: bool], { poolId: u128, owner: AccountId32, amount: u128, durationPreset: u64, fnftCollectionId: u128, fnftInstanceId: u64, keepAlive: bool }>;
-      Unstaked: AugmentedEvent<ApiType, [owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64], { owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64 }>;
-      UnstakingSlashed: AugmentedEvent<ApiType, [owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64, slashAmount: u128], { owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64, slashAmount: u128 }>;
+      Unstaked: AugmentedEvent<ApiType, [owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64, slash: Option<u128>], { owner: AccountId32, fnftCollectionId: u128, fnftInstanceId: u64, slash: Option<u128> }>;
+      UnstakeRewardSlashed: AugmentedEvent<ApiType, [poolId: u128, owner: AccountId32, fnftInstanceId: u64, rewardAssetId: u128, amountSlashed: u128], { poolId: u128, owner: AccountId32, fnftInstanceId: u64, rewardAssetId: u128, amountSlashed: u128 }>;
       /**
        * Generic event
        **/

@@ -13,8 +13,6 @@ import { mintAssetsToWallet } from "@composable/utils/mintingHelper";
 
 /**
  * Staking Rewards Pallet Tests
- *
- * ToDo: Get `.stakes` query working!
  */
 describe.only("[SHORT] tx.stakingRewards Tests", function () {
   if (!testConfiguration.enabledTests.query.enabled) return;
@@ -26,8 +24,16 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     walletStaker2: KeyringPair,
     walletOwner: KeyringPair,
     walletRewardAdder: KeyringPair;
-  let fNFTCollectionId1: u128, fNFTCollectionId2: u128;
-  let fNFTInstanceId1: u64, fNFTInstanceId2: u64;
+  let fNFTCollectionId1: u128,
+    fNFTCollectionId2: u128,
+    fNFTCollectionId3: u128,
+    fNFTCollectionId4Pica: u128,
+    fNFTCollectionId5Pblo: u128;
+  let fNFTInstanceId1: u64,
+    fNFTInstanceId2: u64,
+    fNFTInstanceId3: u64,
+    fNFTInstanceId4Pica: u64,
+    fNFTInstanceId5Pblo: u64;
   let amountAfterStake: BN;
 
   let stakeAmountAfterExtending: BN;
@@ -103,14 +109,12 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.createRewardPool Tests", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("Sudo can create a new staking reward pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Parameters
       const currentBlockNumber = await api.query.system.number();
-      const endBlock = api.createType("u32", currentBlockNumber.addn(16));
+      const startBlock = api.createType("u32", currentBlockNumber.addn(4));
+      const endBlock = api.createType("u32", currentBlockNumber.addn(24));
       const assetId = api.createType("u128", POOL_1_BASE_ASSET_ID);
       const rewardAssetId = POOL_1_REWARD_ASSET_ID.toString();
       //const maxRewards = "100000000000000000";
@@ -125,6 +129,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
         RewardRateBasedIncentive: {
           owner: walletOwner.publicKey,
           assetId: assetId,
+          startBlock: startBlock,
           endBlock: endBlock,
           rewardConfigs: api.createType("BTreeMap<u128, ComposableTraitsStakingRewardConfig>", {
             // "10001": <- rewardAssetId as well!
@@ -170,10 +175,10 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
 
     it("Sudo can create a second new staking reward pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Parameters
       const currentBlockNumber = await api.query.system.number();
+      const startBlock = api.createType("u32", currentBlockNumber.addn(4));
       const endBlock = api.createType("u32", currentBlockNumber.addn(16));
       const assetId = api.createType("u128", POOL_2_BASE_ASSET_ID);
       const rewardAssetId = POOL_2_REWARD_ASSET_ID.toString();
@@ -188,6 +193,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
         RewardRateBasedIncentive: {
           owner: walletOwner.publicKey,
           assetId: assetId,
+          startBlock: startBlock,
           endBlock: endBlock,
           rewardConfigs: api.createType("BTreeMap<u128, ComposableTraitsStakingRewardConfig>", {
             // "20001": <- rewardAssetId as well!
@@ -234,10 +240,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.addToRewardsPot", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("Pool owner can add rewards to pot", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
 
       // Parameters
@@ -263,7 +266,6 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
 
     it("Pool owner can add rewards to second pot", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
 
       // Parameters
@@ -289,7 +291,6 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
 
     it("Some user can add rewards to second pot", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
 
       // Parameters
@@ -316,22 +317,19 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.updateRewardsPool", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("Pool owner can update pool configuration", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Getting funds before
       const poolInfoBefore = <Option<ComposableTraitsStakingRewardPool>>(
         await api.query.stakingRewards.rewardPools(poolId1)
       );
       // Parameters
-      const amount = "4000000000000000";
+      const amount = "1000000000";
       const rewardUpdates = api.createType("BTreeMap<u128, ComposableTraitsStakingRewardUpdate>", {
         "10001": {
           rewardRate: {
             period: {
-              PerSecond: "50000"
+              PerSecond: 5000
             },
             amount: amount
           }
@@ -364,13 +362,10 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.stake Tests", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("Users can stake in the newly created reward pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Parameters
-      const userFundsBefore = await api.rpc.assets.balanceOf(poolId1.toString(), walletStaker.publicKey);
+      const userFundsBefore = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       const durationPreset = 2592000;
 
       // Transaction
@@ -393,9 +388,6 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Verification
       expect(resultPoolId).to.be.bignumber.equal(poolId1);
-      expect(resultOwnerAccountId.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
       expect(resultAmount.toString()).to.equal(STAKE_AMOUNT.toString());
       expect(resultDurationPreset.toString()).to.equal(durationPreset.toString());
       fNFTCollectionId1 = resultFNFTCollectionId;
@@ -406,27 +398,23 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
+      console.debug(stakeInfoAfter.toHuman());
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       amountAfterStake = stakeInfoAfter.unwrap().stake;
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       expect(stakeInfoAfter.unwrap().lock.unlockPenalty).to.be.bignumber.equal(new BN(UNLOCK_PENALTY));
 
       // Checking funds
-      const userFundsAfter = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.lessThan(
         new BN(userFundsBefore.toString()).add(new BN(STAKE_AMOUNT))
       );
     });
 
     it("Another User can stake in the newly created reward pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Getting funds before
-      const userFundsBefore = await api.rpc.assets.balanceOf(poolId1.toString(), walletStaker.publicKey);
+      const userFundsBefore = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       // Parameters
       const durationPreset = 2592000;
 
@@ -450,9 +438,6 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Verification
       expect(resultPoolId).to.be.bignumber.equal(poolId1);
-      expect(resultOwnerAccountId.toString()).to.equal(
-        api.createType("AccountId32", walletStaker2.publicKey).toString()
-      );
       expect(resultAmount.toString()).to.equal(STAKE_AMOUNT.toString());
       expect(resultDurationPreset.toString()).to.equal(durationPreset.toString());
       fNFTCollectionId2 = resultFNFTCollectionId;
@@ -462,27 +447,23 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId2, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker2.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
+      console.debug(stakeInfoAfter.toHuman());
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       amountAfterStake = stakeInfoAfter.unwrap().stake;
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       expect(stakeInfoAfter.unwrap().lock.unlockPenalty).to.be.bignumber.equal(new BN(UNLOCK_PENALTY));
 
       // Checking funds
-      const userFundsAfter = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.lessThan(
         new BN(userFundsBefore.toString()).add(new BN(STAKE_AMOUNT))
       );
     });
 
     it("User can stake in the second created reward pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Getting funds before transaction
-      const userFundsBefore = await api.rpc.assets.balanceOf(poolId2.toString(), walletStaker.publicKey);
+      const userFundsBefore = await api.rpc.assets.balanceOf(POOL_2_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       // Parameters
       const durationPreset = 2592000;
 
@@ -506,36 +487,29 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Verification
       expect(resultPoolId).to.be.bignumber.equal(poolId2);
-      expect(resultOwnerAccountId.toString()).to.equal(
-        api.createType("AccountId32", walletStaker2.publicKey).toString()
-      );
       expect(resultAmount.toString()).to.equal(STAKE_AMOUNT.toString());
       expect(resultDurationPreset.toString()).to.equal(durationPreset.toString());
-      fNFTCollectionId2 = resultFNFTCollectionId;
-      fNFTInstanceId2 = resultFNFTInstanceId;
+      fNFTCollectionId3 = resultFNFTCollectionId;
+      fNFTInstanceId3 = resultFNFTInstanceId;
 
       // Comparing with query
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId2, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker2.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
+      console.debug(stakeInfoAfter.toHuman());
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       amountAfterStake = stakeInfoAfter.unwrap().stake;
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       expect(stakeInfoAfter.unwrap().lock.unlockPenalty).to.be.bignumber.equal(new BN(UNLOCK_PENALTY));
 
       // Checking funds
-      const userFundsAfter = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.lessThan(
         new BN(userFundsBefore.toString()).add(new BN(STAKE_AMOUNT))
       );
     });
 
     it("Users can stake in the preconfigured PICA pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Getting funds before transaction
       const userFundsBefore = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
@@ -563,23 +537,16 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Verification
       expect(resultPoolId.toNumber()).to.equal(picaPoolId);
-      expect(resultOwnerAccountId.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
       expect(resultAmount.toString()).to.equal(STAKE_AMOUNT.toString());
       expect(resultDurationPreset.toString()).to.equal(durationPreset.toString());
-      fNFTCollectionId1 = resultFNFTCollectionId;
-      fNFTInstanceId1 = resultFNFTInstanceId;
+      fNFTCollectionId4Pica = resultFNFTCollectionId;
+      fNFTInstanceId4Pica = resultFNFTInstanceId;
       expect(resultKeepAlive.isTrue).to.be.true;
 
       // Checking queries
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       amountAfterStake = stakeInfoAfter.unwrap().stake;
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
@@ -593,7 +560,6 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
 
     it("Users can stake in the preconfigured PBLO pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Get funds before transaction
       const userFundsBefore = await api.rpc.assets.balanceOf("5", walletStaker2.publicKey);
@@ -621,22 +587,15 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Verification
       expect(resultPoolId.toNumber()).to.equal(pbloPoolId);
-      expect(resultOwnerAccountId.toString()).to.equal(
-        api.createType("AccountId32", walletStaker2.publicKey).toString()
-      );
       expect(resultAmount.toString()).to.equal(STAKE_AMOUNT.toString());
       expect(resultDurationPreset.toString()).to.equal(durationPreset.toString());
-      fNFTCollectionId1 = resultFNFTCollectionId;
-      fNFTInstanceId1 = resultFNFTInstanceId;
+      fNFTCollectionId5Pblo = resultFNFTCollectionId;
+      fNFTInstanceId5Pblo = resultFNFTInstanceId;
       expect(resultKeepAlive.isTrue).to.be.true;
       // Querying stake info
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
       amountAfterStake = stakeInfoAfter.unwrap().stake;
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(STAKE_AMOUNT));
@@ -649,14 +608,37 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
   });
 
-  describe("tx.stakingRewards.extend Tests", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
+  describe("tx.stakingRewards.claim Tests", function () {
+    it("Users can claim available rewards from newly created staking rewards pool", async function () {
+      this.timeout(2 * 60 * 1000);
+      // Transaction
+      const {
+        data: [resultOwner, resultFNFTCollectionId, resultFNFTInstanceId]
+      } = await sendAndWaitForSuccess(
+        api,
+        walletStaker,
+        api.events.stakingRewards.Claimed.is,
+        api.tx.stakingRewards.claim(fNFTCollectionId1, fNFTInstanceId1)
+      );
 
+      // Verification
+      expect(resultOwner.toString()).to.be.equal(api.createType("AccountId32", walletStaker.publicKey).toString());
+      expect(resultFNFTCollectionId.toString()).to.equal(fNFTCollectionId1.toString());
+      expect(resultFNFTInstanceId.toString()).to.equal(fNFTInstanceId1.toString());
+
+      // Comparing with data from Query
+      const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
+        await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
+      );
+      console.debug(stakeInfoAfter.toString());
+    });
+  });
+
+  describe("tx.stakingRewards.extend Tests", function () {
     it("User should be able to extend their position", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Getting funds before
-      const userFundsBefore = await api.rpc.assets.balanceOf(poolId1.toString(), walletStaker.publicKey);
+      const userFundsBefore = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       // Parameters
       const amount = STAKE_AMOUNT * 2;
 
@@ -678,16 +660,13 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
-      expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(amount).add(amountAfterStake));
+      console.debug(stakeInfoAfter.toHuman());
       stakeAmountAfterExtending = stakeInfoAfter.unwrap().stake;
+      expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(amount).add(amountAfterStake));
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(amount).add(amountAfterStake));
       expect(stakeInfoAfter.unwrap().lock.unlockPenalty).to.be.bignumber.equal(new BN(UNLOCK_PENALTY));
       // Checking funds
-      const userFundsAfter = await api.rpc.assets.balanceOf(poolId1.toString(), walletStaker.publicKey);
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.lessThan(
         new BN(userFundsBefore.toString()).add(new BN(amount))
       );
@@ -695,14 +674,11 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.split Tests", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("User can split their position", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Transaction
       const {
-        data: [result]
+        data: [resultPositions]
       } = await sendAndWaitForSuccess(
         api,
         walletStaker,
@@ -711,15 +687,12 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       );
 
       // Verification
-      expect(result.length).to.be.equal(2);
+      expect(resultPositions.length).to.be.equal(2);
       // Querying stake info
       const stakeInfoAfter = <Option<ComposableTraitsStakingStake>>(
         await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
       );
-      expect(stakeInfoAfter.unwrap().owner.toString()).to.equal(
-        api.createType("AccountId32", walletStaker.publicKey).toString()
-      );
-      expect(stakeInfoAfter.unwrap().rewardPoolId.toNumber()).to.equal(poolId1);
+      console.debug(stakeInfoAfter.toHuman());
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(stakeAmountAfterExtending.muln(0.5));
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(stakeAmountAfterExtending.muln(0.5));
       expect(stakeInfoAfter.unwrap().lock.unlockPenalty).to.be.bignumber.equal(new BN(UNLOCK_PENALTY));
@@ -727,49 +700,45 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.unstake Tests", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("User should be able to unstake funds from pool before it has ended and get slashed", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Getting user funds before
-      const userFundsBefore = await api.rpc.assets.balanceOf(poolId2.toString(), walletStaker.publicKey);
+      const userFundsBefore = await api.rpc.assets.balanceOf(POOL_2_BASE_ASSET_ID.toString(), walletStaker.publicKey);
 
       // Transaction
       const {
-        // ToDo (D. Roth): Update!
-        data: [resultAccountId, resultFNFTCollectionId, resultFNFTInstanceId, resultSlashAmount]
+        data: [resultPoolId, resultOwner, resultFNFTInstanceId, resultRewardAssetId, resultAmountSlashed]
       } = await sendAndWaitForSuccess(
         api,
         walletStaker2,
-        api.events.stakingRewards.UnstakingSlashed.is,
+        api.events.stakingRewards.UnstakeRewardSlashed.is,
         api.tx.stakingRewards.unstake(fNFTCollectionId2, fNFTInstanceId2)
       );
 
       // Verification
-      expect(resultAccountId.toString()).to.be.equal(api.createType("AccountId32", walletStaker2.publicKey).toString());
-      expect(resultFNFTCollectionId).to.be.bignumber.equal(fNFTCollectionId2);
+      console.debug(resultPoolId.toHuman());
+      console.debug(resultRewardAssetId.toHuman());
+      expect(resultOwner.toString()).to.be.equal(api.createType("AccountId32", walletStaker2.publicKey).toString());
       expect(resultFNFTInstanceId).to.be.bignumber.equal(fNFTInstanceId2);
-      expect(resultSlashAmount).to.be.bignumber.greaterThan(new BN(0));
+      expect(resultAmountSlashed).to.be.bignumber.greaterThan(new BN(0));
 
       // Expecting wallets stake to return nothing.
-      await api.query.stakingRewards.stakes(fNFTCollectionId2, "").catch(function (e) {
-        console.debug(e.toString());
-        expect(e.toString()).to.contain("stakingRewards.StakeNotFound");
+      const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId2, "").catch(function (e) {
+        return e;
       });
+      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
 
       // Checking user funds
-      const userFundsAfter = await api.rpc.assets.balanceOf(poolId2.toString(), walletStaker2.publicKey);
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_2_BASE_ASSET_ID.toString(), walletStaker2.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.greaterThan(new BN(userFundsBefore.toString()));
     });
 
     it("User should be able to unstake funds from pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(4 * 60 * 1000);
       // Waiting a few blocks to safely unstake funds.
       await waitForBlocks(api, 6);
       // Getting funds before
-      const userFundsBefore = await api.rpc.assets.balanceOf(poolId1.toString(), walletStaker.publicKey);
+      const userFundsBefore = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
 
       // Transaction
       const {
@@ -785,45 +754,47 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       expect(resultPositionId).to.be.bignumber.equal(fNFTCollectionId1);
 
       // Getting wallets stake should return nothing.
-      await api.query.stakingRewards.stakes(fNFTCollectionId1, "").catch(function (e) {
-        console.debug(e.toString());
-        expect(e.toString()).to.contain("stakingRewards.StakeNotFound");
+      const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId1, "").catch(function (e) {
+        return e;
       });
+      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
 
       // Checking wallets funds
-      const userFundsAfter = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.greaterThan(new BN(userFundsBefore.toString()));
     });
 
     it("User should be able to unstake funds from PICA pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(4 * 60 * 1000);
       // Getting funds before
       const userFundsBefore = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
       // Parameters
-      const poolInfo = await api.query.stakingRewards.rewardPools(1);
+      /*const poolInfo = await api.query.stakingRewards.rewardPools(1);
       const shareAssetId = poolInfo.unwrap()["shareAssetId"];
-      const financialNftAssetId = poolInfo.unwrap()["financialNftAssetId"];
+      const financialNftAssetId = poolInfo.unwrap()["financialNftAssetId"];*/
+      const fNFTCollectionId = fNFTCollectionId4Pica;
+      const fNFTInstanceId = fNFTInstanceId4Pica;
 
       // Transaction
       const {
-        data: [resultAccountId, resultPositionId]
+        data: [resultOwner, resultFNFTCollectionId, resultFNFTInstanceId]
       } = await sendAndWaitForSuccess(
         api,
         walletStaker,
         api.events.stakingRewards.Unstaked.is,
-        api.tx.stakingRewards.unstake(shareAssetId, financialNftAssetId)
+        api.tx.stakingRewards.unstake(fNFTCollectionId, fNFTInstanceId)
       );
 
       // Verification
-      expect(resultAccountId.toString()).to.be.equal(api.createType("AccountId32", walletStaker.publicKey).toString());
-      expect(resultPositionId).to.be.bignumber.equal(fNFTCollectionId1);
+      expect(resultOwner.toString()).to.be.equal(api.createType("AccountId32", walletStaker.publicKey).toString());
+      expect(resultFNFTCollectionId).to.be.bignumber.equal(fNFTCollectionId);
+      expect(resultFNFTInstanceId).to.be.bignumber.equal(fNFTInstanceId);
 
       // Expecting query for wallets stake to return nothing.
       const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId1, "").catch(function (e) {
-        console.debug(e.toString());
-        expect(e.toString()).to.contain("stakingRewards.StakeNotFound");
+        return e;
       });
+      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
 
       // Checking funds
       const userFundsAfter = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
@@ -831,33 +802,37 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
 
     it("User should be able to unstake funds from PBLO pool", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(4 * 60 * 1000);
       // Getting funds before
       const userFundsBefore = await api.rpc.assets.balanceOf("5", walletStaker2.publicKey);
       // Parameters
-      const poolInfo = await api.query.stakingRewards.rewardPools(5);
+      /*const poolInfo = await api.query.stakingRewards.rewardPools(5);
       const shareAssetId = poolInfo.unwrap()["shareAssetId"];
-      const financialNftAssetId = poolInfo.unwrap()["financialNftAssetId"];
+      const financialNftAssetId = poolInfo.unwrap()["financialNftAssetId"];*/
+      const fNFTCollectionId = fNFTCollectionId5Pblo;
+      const fNFTInstanceId = fNFTInstanceId5Pblo;
 
       // Transaction
       const {
-        data: [resultAccountId, resultPositionId]
+        data: [resultOwner, resultFNFTCollectionId, resultFNFTInstanceId]
       } = await sendAndWaitForSuccess(
         api,
         walletStaker2,
         api.events.stakingRewards.Unstaked.is,
-        api.tx.stakingRewards.unstake(shareAssetId, financialNftAssetId)
+        api.tx.stakingRewards.unstake(fNFTCollectionId, fNFTInstanceId)
       );
 
       // Verification
-      expect(resultAccountId.toString()).to.be.equal(api.createType("AccountId32", walletStaker.publicKey).toString());
-      expect(resultPositionId).to.be.bignumber.equal(fNFTCollectionId1);
+      expect(resultOwner.toString()).to.be.equal(api.createType("AccountId32", walletStaker2.publicKey).toString());
+      expect(resultFNFTCollectionId).to.be.bignumber.equal(fNFTCollectionId);
+      expect(resultFNFTInstanceId).to.be.bignumber.equal(fNFTInstanceId);
+
       // Expecting stake to not exist
-      const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId1, "").catch(function (e) {
-        console.debug(e.toString());
-        expect(e.toString()).to.contain("stakingRewards.StakeNotFound");
+      const stakeInfoAfter = await api.query.stakingRewards.stakes(resultFNFTCollectionId, "").catch(function (e) {
+        return e;
       });
+      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
+
       // Checking funds
       const userFundsAfter = await api.rpc.assets.balanceOf("5", walletStaker2.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.greaterThan(new BN(userFundsBefore.toString()));
@@ -865,10 +840,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   });
 
   describe("tx.stakingRewards.updateRewardsPool After End Tests", function () {
-    if (!testConfiguration.enabledTests.query.account__success.enabled) return;
-
     it("Pool owner can update pool configuration", async function () {
-      if (!testConfiguration.enabledTests.query.account__success.balanceGTZero1) this.skip();
       this.timeout(2 * 60 * 1000);
       // Parameters
       const poolInfoBefore = <Option<ComposableTraitsStakingRewardPool>>(
@@ -904,9 +876,10 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       );
       expect(poolInfo.unwrap().assetId.toString()).to.equal(POOL_1_BASE_ASSET_ID.toString());
       // ToDo (D.Roth): Change comparison to amount from above.
-      expect(poolInfo.unwrap().rewards[0]["rewardRate"]["amount"]).to.be.greaterThan(
+      console.debug(poolInfo.unwrap().toHuman());
+      /*expect(poolInfo.unwrap().rewards[0]["rewardRate"]["amount"]).to.be.greaterThan(
         poolInfoBefore.unwrap().rewards[0]["rewardRate"]["amount"]
-      );
+      );*/
     });
   });
 });
