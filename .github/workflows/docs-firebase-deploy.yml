@@ -1,11 +1,10 @@
 name: Firebase Deploy Gcloud
 
 on:
-  workflow_dispatch:
-    inputs:
-      deployer:
-        required: true
-        description: who is doing this?
+  push: 
+    branches: 
+      - main
+      - simulate-simnode
 
 env:
   FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
