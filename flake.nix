@@ -498,6 +498,11 @@
             inherit subwasm;
             inherit subwasm-release-body;
 
+            xcmp = crane-nightly.buildPackage (common-attrs // rec {
+              pname = "xcmp";
+              cargoArtifacts = common-deps-nightly;
+            });
+
             xcvm-contract-asset-registry =
               mk-xcvm-contract "xcvm-asset-registry";
             xcvm-contract-router = mk-xcvm-contract "xcvm-router";
@@ -628,7 +633,7 @@
               version = "0.9.27";
               src = fetchFromGitHub {
                 repo = "polkadot";
-                owner = "paritytech";
+                owner = "paritytech";W
                 rev = "v${version}";
                 hash = "sha256-LEz3OrVgdFTCnVwzU8C6GeEougaOl2qo7jS9qIdMqAM=";
               };
@@ -1049,6 +1054,7 @@
                   nixfmt
                   rnix-lsp
                   subxt
+                  xcmp
                 ] ++ docs-renders;
             });
 
