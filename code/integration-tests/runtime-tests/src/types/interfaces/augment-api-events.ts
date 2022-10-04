@@ -202,9 +202,23 @@ declare module '@polkadot/api-base/types/events' {
       [key: string]: AugmentedEvent<ApiType>;
     };
     crowdloanRewards: {
+      /**
+       * A remote account has been associated with a reward account.
+       **/
       Associated: AugmentedEvent<ApiType, [remoteAccount: PalletCrowdloanRewardsModelsRemoteAccount, rewardAccount: AccountId32], { remoteAccount: PalletCrowdloanRewardsModelsRemoteAccount, rewardAccount: AccountId32 }>;
+      /**
+       * A claim has been made.
+       **/
       Claimed: AugmentedEvent<ApiType, [remoteAccount: PalletCrowdloanRewardsModelsRemoteAccount, rewardAccount: AccountId32, amount: u128], { remoteAccount: PalletCrowdloanRewardsModelsRemoteAccount, rewardAccount: AccountId32, amount: u128 }>;
+      /**
+       * The crowdloan has been initialized or set to initialize at some time.
+       **/
       Initialized: AugmentedEvent<ApiType, [at: u64], { at: u64 }>;
+      /**
+       * The crowdloan was successfully initialized, but with excess funds that won't be
+       * claimed.
+       **/
+      OverFunded: AugmentedEvent<ApiType, [excessFunds: u128], { excessFunds: u128 }>;
       /**
        * Generic event
        **/
@@ -944,7 +958,7 @@ declare module '@polkadot/api-base/types/events' {
        **/
       RewardTransferred: AugmentedEvent<ApiType, [from: AccountId32, poolId: u128, rewardCurrency: u128, rewardIncrement: u128], { from: AccountId32, poolId: u128, rewardCurrency: u128, rewardIncrement: u128 }>;
       /**
-       * Split stake position into two positions
+       * A staking position was split.
        **/
       SplitPosition: AugmentedEvent<ApiType, [positions: Vec<ITuple<[u128, u64, u128]>>], { positions: Vec<ITuple<[u128, u64, u128]>> }>;
       StakeAmountExtended: AugmentedEvent<ApiType, [fnftCollectionId: u128, fnftInstanceId: u64, amount: u128], { fnftCollectionId: u128, fnftInstanceId: u64, amount: u128 }>;

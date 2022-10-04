@@ -6,7 +6,7 @@ import { getNewConnection } from "@composable/utils/connectionHelper";
 import { getDevWallets } from "@composable/utils/walletHelper";
 import { sendAndWaitForSuccess, waitForBlocks } from "@composable/utils/polkadotjs";
 import { ComposableTraitsStakingRewardPool, ComposableTraitsStakingStake } from "@composable/types/interfaces";
-import { Option, u128, u64 } from "@polkadot/types-codec";
+import { Null, Option, u128, u64 } from "@polkadot/types-codec";
 import BN from "bn.js";
 import { before } from "mocha";
 import { mintAssetsToWallet } from "@composable/utils/mintingHelper";
@@ -39,13 +39,14 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
   let stakeAmountAfterExtending: BN;
 
   const STAKE_AMOUNT = 100_000_000_000;
-  const UNLOCK_PENALTY = 1000000000;
+  const UNLOCK_PENALTY = 100000000;
 
   const POOL_1_BASE_ASSET_ID = 10000;
   const POOL_1_REWARD_ASSET_ID = 10001;
 
   const POOL_2_BASE_ASSET_ID = 20000;
-  const POOL_2_REWARD_ASSET_ID = 20001;
+  const POOL_2_REWARD_ASSET_ID_1 = 20001;
+  const POOL_2_REWARD_ASSET_ID_2 = 20002;
 
   const PBLO_ASSET_ID = 5;
 
@@ -72,7 +73,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       POOL_1_BASE_ASSET_ID,
       POOL_1_REWARD_ASSET_ID,
       POOL_2_BASE_ASSET_ID,
-      POOL_2_REWARD_ASSET_ID,
+      POOL_2_REWARD_ASSET_ID_1,
       1_000_000_000_000_000
     ]);
     await mintAssetsToWallet(api, walletStaker2, sudoKey, [
@@ -81,7 +82,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       POOL_1_BASE_ASSET_ID,
       POOL_1_REWARD_ASSET_ID,
       POOL_2_BASE_ASSET_ID,
-      POOL_2_REWARD_ASSET_ID,
+      POOL_2_REWARD_ASSET_ID_1,
       1_000_000_000_000_000
     ]);
     await mintAssetsToWallet(api, walletOwner, sudoKey, [
@@ -90,7 +91,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       POOL_1_BASE_ASSET_ID,
       POOL_1_REWARD_ASSET_ID,
       POOL_2_BASE_ASSET_ID,
-      POOL_2_REWARD_ASSET_ID,
+      POOL_2_REWARD_ASSET_ID_1,
       1_000_000_000_000_000
     ]);
     await mintAssetsToWallet(api, walletRewardAdder, sudoKey, [
@@ -99,7 +100,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       POOL_1_BASE_ASSET_ID,
       POOL_1_REWARD_ASSET_ID,
       POOL_2_BASE_ASSET_ID,
-      POOL_2_REWARD_ASSET_ID,
+      POOL_2_REWARD_ASSET_ID_1,
       1_000_000_000_000_000
     ]);
   });
@@ -108,7 +109,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     await api.disconnect();
   });
 
-  describe("tx.stakingRewards.createRewardPool Tests", function () {
+  describe.only("tx.stakingRewards.createRewardPool Tests", function () {
     it("Sudo can create a new staking reward pool", async function () {
       this.timeout(2 * 60 * 1000);
       // Parameters
@@ -117,10 +118,9 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const endBlock = api.createType("u32", currentBlockNumber.addn(24));
       const assetId = api.createType("u128", POOL_1_BASE_ASSET_ID);
       const rewardAssetId = POOL_1_REWARD_ASSET_ID.toString();
-      //const maxRewards = "100000000000000000";
       const maxRewards = "1000000000";
       const rewardPeriodPerSecond = "100000";
-      const amount = "1000000000";
+      const amount = (10 ** 12).toString();
       const durationPreset = {
         "2592000": "1000000000"
       };
@@ -132,9 +132,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
           startBlock: startBlock,
           endBlock: endBlock,
           rewardConfigs: api.createType("BTreeMap<u128, ComposableTraitsStakingRewardConfig>", {
-            // "10001": <- rewardAssetId as well!
             "10001": {
-              assetId: rewardAssetId,
               maxRewards: maxRewards,
               rewardRate: {
                 period: {
@@ -167,6 +165,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       // Verifications
       // Querying pool info
       const poolInfo = <Option<ComposableTraitsStakingRewardPool>>await api.query.stakingRewards.rewardPools(poolId1);
+      console.debug(poolInfo.unwrap().toHuman());
       expect(poolInfo.unwrap().owner.toString())
         .to.be.equal(resultOwner.toString())
         .to.be.equal(api.createType("AccountId32", walletOwner.publicKey).toString());
@@ -181,10 +180,14 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const startBlock = api.createType("u32", currentBlockNumber.addn(4));
       const endBlock = api.createType("u32", currentBlockNumber.addn(16));
       const assetId = api.createType("u128", POOL_2_BASE_ASSET_ID);
-      const rewardAssetId = POOL_2_REWARD_ASSET_ID.toString();
-      const maxRewards = "10000000000000";
+      const maxRewards1 = (100 * 10 ** 12).toString();
+      const maxRewards2 = (100 * 10 ** 12).toString();
+      const maxRewards3 = (100 * 10 ** 12).toString();
       const rewardPeriodPerSecond = "100000";
-      const amount = "10000000000000";
+      const amount1 = (0.1 * 10 ** 12).toString();
+      const amount2 = (0.5 * 10 ** 12).toString();
+      const amount3 = (10 ** 12).toString();
+
       const durationPreset = {
         "2592000": "1000000000"
       };
@@ -196,15 +199,32 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
           startBlock: startBlock,
           endBlock: endBlock,
           rewardConfigs: api.createType("BTreeMap<u128, ComposableTraitsStakingRewardConfig>", {
-            // "20001": <- rewardAssetId as well!
+            // The dict keys are the reward asset IDs!
             "20001": {
-              assetId: rewardAssetId,
-              maxRewards: maxRewards,
+              maxRewards: maxRewards1,
               rewardRate: {
                 period: {
                   PerSecond: rewardPeriodPerSecond
                 },
-                amount: amount
+                amount: amount1
+              }
+            },
+            "20002": {
+              maxRewards: maxRewards2,
+              rewardRate: {
+                period: {
+                  PerSecond: rewardPeriodPerSecond
+                },
+                amount: amount2
+              }
+            },
+            "20003": {
+              maxRewards: maxRewards3,
+              rewardRate: {
+                period: {
+                  PerSecond: rewardPeriodPerSecond
+                },
+                amount: amount3
               }
             }
           }),
@@ -239,7 +259,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
   });
 
-  describe("tx.stakingRewards.addToRewardsPot", function () {
+  describe.only("tx.stakingRewards.addToRewardsPot", function () {
     it("Pool owner can add rewards to pot", async function () {
       this.timeout(2 * 60 * 1000);
 
@@ -248,7 +268,9 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const assetId = POOL_1_REWARD_ASSET_ID;
       const amount = 1000000000;
       const keepAlive = false;
-
+      // ToDo (D. Roth)
+      const poolInfoB = <Option<any>> await api.query.stakingRewards.rewardsPotIsEmpty(poolId1, null);
+      expect(poolInfoB.unwrapOr(undefined)).to.be.undefined;
       // Transaction
       const {
         data: [resultPoolId, resultAssetId, resultAmount]
@@ -263,6 +285,8 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       expect(poolId).to.be.bignumber.equal(resultPoolId);
       expect(new BN(assetId)).to.be.bignumber.equal(resultAssetId);
       expect(new BN(amount)).to.be.bignumber.equal(resultAmount);
+      const poolInfo = <Option<any>>await api.query.stakingRewards.rewardsPotIsEmpty(poolId1, "");
+      console.debug(poolInfo.unwrap().toHuman());
     });
 
     it("Pool owner can add rewards to second pot", async function () {
@@ -270,7 +294,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Parameters
       const poolId = poolId2;
-      const assetId = POOL_2_REWARD_ASSET_ID;
+      const assetId = POOL_2_REWARD_ASSET_ID_1;
       const amount = 1000000000;
       const keepAlive = false;
 
@@ -295,7 +319,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
 
       // Parameters
       const poolId = poolId2;
-      const assetId = POOL_2_REWARD_ASSET_ID;
+      const assetId = POOL_2_REWARD_ASSET_ID_1;
       const amount = 1000000000;
       const keepAlive = false;
 
@@ -361,7 +385,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
   });
 
-  describe("tx.stakingRewards.stake Tests", function () {
+  describe.only("tx.stakingRewards.stake Tests", function () {
     it("Users can stake in the newly created reward pool", async function () {
       this.timeout(2 * 60 * 1000);
       // Parameters
@@ -386,6 +410,9 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
         api.tx.stakingRewards.stake(poolId1, STAKE_AMOUNT, durationPreset)
       );
 
+      console.debug(api.createType('AccountId32', resultOwnerAccountId).toString());
+      console.debug(api.createType('AccountId32', walletOwner.publicKey).toString());
+      console.debug(api.createType('AccountId32', walletStaker.publicKey).toString());
       // Verification
       expect(resultPoolId).to.be.bignumber.equal(poolId1);
       expect(resultAmount.toString()).to.equal(STAKE_AMOUNT.toString());
@@ -608,9 +635,14 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
     });
   });
 
-  describe("tx.stakingRewards.claim Tests", function () {
+  describe.only("tx.stakingRewards.claim Tests", function () {
     it("Users can claim available rewards from newly created staking rewards pool", async function () {
       this.timeout(2 * 60 * 1000);
+      // Get funds before transaction
+      const userFundsBefore = await api.rpc.assets.balanceOf(
+        POOL_1_REWARD_ASSET_ID.toString(),
+        walletStaker2.publicKey
+      );
       // Transaction
       const {
         data: [resultOwner, resultFNFTCollectionId, resultFNFTInstanceId]
@@ -631,6 +663,14 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
         await api.query.stakingRewards.stakes(fNFTCollectionId1, "")
       );
       console.debug(stakeInfoAfter.toString());
+
+      // Checking funds
+      const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_REWARD_ASSET_ID.toString(), walletStaker2.publicKey);
+      console.debug(userFundsAfter.toString());
+      console.debug(new BN(userFundsAfter.toString()).eq(new BN(stakeInfoAfter.unwrap().reductions['10001'])));
+      expect(new BN(userFundsAfter.toString())).to.be.bignumber.lessThan(
+        new BN(userFundsBefore.toString()).add(new BN(STAKE_AMOUNT))
+      );
     });
   });
 
@@ -663,8 +703,8 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       console.debug(stakeInfoAfter.toHuman());
       stakeAmountAfterExtending = stakeInfoAfter.unwrap().stake;
       expect(stakeInfoAfter.unwrap().stake).to.be.bignumber.equal(new BN(amount).add(amountAfterStake));
+      // ToDo if still the case if multiple stakers!
       expect(stakeInfoAfter.unwrap().share).to.be.bignumber.equal(new BN(amount).add(amountAfterStake));
-      expect(stakeInfoAfter.unwrap().lock.unlockPenalty).to.be.bignumber.equal(new BN(UNLOCK_PENALTY));
       // Checking funds
       const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
       expect(new BN(userFundsAfter.toString())).to.be.bignumber.lessThan(
@@ -726,7 +766,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId2, "").catch(function (e) {
         return e;
       });
-      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
+      expect(stakeInfoAfter.toString()).to.equal("");
 
       // Checking user funds
       const userFundsAfter = await api.rpc.assets.balanceOf(POOL_2_BASE_ASSET_ID.toString(), walletStaker2.publicKey);
@@ -757,7 +797,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId1, "").catch(function (e) {
         return e;
       });
-      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
+      expect(stakeInfoAfter.toString()).to.equal("");
 
       // Checking wallets funds
       const userFundsAfter = await api.rpc.assets.balanceOf(POOL_1_BASE_ASSET_ID.toString(), walletStaker.publicKey);
@@ -794,7 +834,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = await api.query.stakingRewards.stakes(fNFTCollectionId1, "").catch(function (e) {
         return e;
       });
-      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
+      expect(stakeInfoAfter.toString()).to.equal("");
 
       // Checking funds
       const userFundsAfter = await api.rpc.assets.balanceOf("1", walletStaker.publicKey);
@@ -831,7 +871,7 @@ describe.only("[SHORT] tx.stakingRewards Tests", function () {
       const stakeInfoAfter = await api.query.stakingRewards.stakes(resultFNFTCollectionId, "").catch(function (e) {
         return e;
       });
-      expect(stakeInfoAfter.toString()).to.contain("stakingRewards.StakeNotFound");
+      expect(stakeInfoAfter.toString()).to.contain("");
 
       // Checking funds
       const userFundsAfter = await api.rpc.assets.balanceOf("5", walletStaker2.publicKey);

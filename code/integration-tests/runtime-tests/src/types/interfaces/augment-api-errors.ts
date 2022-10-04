@@ -1259,6 +1259,10 @@ declare module '@polkadot/api-base/types/errors' {
        **/
       NoDurationPresetsConfigured: AugmentedError<ApiType>;
       /**
+       * No duration presets were provided upon pool creation.
+       **/
+      NoDurationPresetsProvided: AugmentedError<ApiType>;
+      /**
        * Not enough assets for a stake.
        **/
       NotEnoughAssets: AugmentedError<ApiType>;

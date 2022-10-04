@@ -288,7 +288,7 @@ declare module '@polkadot/api-base/types/storage' {
     };
     crowdloanRewards: {
       /**
-       * Associate a local account with a remote one.
+       * Associations of reward accounts to remote accounts.
        **/
       associations: AugmentedQuery<ApiType, (arg: AccountId32 | string | Uint8Array) => Observable<Option<PalletCrowdloanRewardsModelsRemoteAccount>>, [AccountId32]> & QueryableStorageEntry<ApiType, [AccountId32]>;
       /**
@@ -305,7 +305,7 @@ declare module '@polkadot/api-base/types/storage' {
        **/
       totalRewards: AugmentedQuery<ApiType, () => Observable<u128>, []> & QueryableStorageEntry<ApiType, []>;
       /**
-       * The block at which the users are able to claim their rewards.
+       * The timestamp at which the users are able to claim their rewards.
        **/
       vestingTimeStart: AugmentedQuery<ApiType, () => Observable<Option<u64>>, []> & QueryableStorageEntry<ApiType, []>;
       /**

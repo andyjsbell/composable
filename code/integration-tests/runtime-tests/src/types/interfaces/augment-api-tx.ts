@@ -658,11 +658,11 @@ declare module '@polkadot/api-base/types/submittable' {
        **/
       claim: AugmentedSubmittable<() => SubmittableExtrinsic<ApiType>, []>;
       /**
-       * Initialize the pallet at the current transaction block.
+       * Initialize the pallet at the current timestamp.
        **/
       initialize: AugmentedSubmittable<() => SubmittableExtrinsic<ApiType>, []>;
       /**
-       * Initialize the pallet at the given transaction block.
+       * Initialize the pallet at the given timestamp.
        **/
       initializeAt: AugmentedSubmittable<(at: u64 | AnyNumber | Uint8Array) => SubmittableExtrinsic<ApiType>, [u64]>;
       /**
