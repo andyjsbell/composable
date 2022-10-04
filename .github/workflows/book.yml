@@ -2,7 +2,7 @@ name: GCS Book Bucket deploy
 on:
   push: 
     branches: 
-      - simulate-simnode
+      - main
 
 env:
   CI_SERVICE_ACCOUNT_KEY: ${{ secrets.CI_SERVICE_ACCOUNT_KEY }}

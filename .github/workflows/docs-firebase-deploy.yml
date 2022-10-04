@@ -1,0 +1,44 @@
+name: Firebase Deploy Gcloud
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployer:
+        required: true
+        description: who is doing this?
+
+env:
+  FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+  working_directory: <working_directory_for_firebase_app>
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12'
+      
+      - name: Install Rust
+        run: |
+         rustup set profile minimal
+         rustup toolchain install stable
+         rustup default stable
+
+      - name: Install mdbook
+        run: |
+          mkdir bin
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.14/mdbook-v0.4.14-x86_64-unknown-linux-gnu.tar.gz | tar -xz --directory=bin
+          echo "$(pwd)/bin" >> $GITHUB_PATH
+
+      - name: Run mdbook
+        run: mdbook build --dest-dir book
+        working-directory: ${{env.working-directory}}
+
+      - name: install firebase
+        run: npm i firebase-tools -g  
+
+      - name: deploy
+        run: firebase deploy --token ${{ secrets.FIREBASE_TOKEN }}
