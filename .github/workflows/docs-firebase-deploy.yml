@@ -8,7 +8,6 @@ on:
 
 env:
   FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-  working_directory: 'book'
 
 jobs:
   build:
@@ -34,7 +33,7 @@ jobs:
 
       - name: Run mdbook
         run: mdbook build --dest-dir book
-        working-directory: ${{env.working-directory}}
+        working-directory: "composable/book/"
 
       - name: install firebase
         run: npm i firebase-tools -g  
