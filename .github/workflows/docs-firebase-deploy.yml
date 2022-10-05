@@ -38,4 +38,4 @@ jobs:
         run: npm i firebase-tools -g  
 
       - name: deploy
-        run: cd book && firebase use composable-docs  && firebase deploy --token ${{ secrets.GCP_CREDENTIALS }}
+        run: cd book && firebase deploy --token ${{ secrets.GCP_SA_KEY }}
