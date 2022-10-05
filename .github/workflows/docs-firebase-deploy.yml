@@ -32,7 +32,7 @@ jobs:
           echo "$(pwd)/bin" >> $GITHUB_PATH
 
       - name: Run mdbook
-        run: cd book && mdbook build --dest-dir book
+        run: cd book && mdbook build --dest-dir html
 
       - name: install firebase
         run: npm i firebase-tools -g  
