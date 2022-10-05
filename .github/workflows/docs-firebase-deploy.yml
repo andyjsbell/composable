@@ -38,4 +38,4 @@ jobs:
         run: npm i firebase-tools -g  
 
       - name: deploy
-        run: cd book && firebase deploy --token ${{ secrets.GCP_SA_KEY }}
+        run: cd book && firebase deploy --token ${{ secrets.CI_SERVICE_ACCOUNT_KEY }}
